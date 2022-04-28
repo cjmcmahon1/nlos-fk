@@ -49,7 +49,6 @@ for l = 1:size(lines, 1)
     time_coords(l, :) = timing_hist;
 end
 time_coords = reshape(time_coords, 32, 32, timing_res);
-xyt_coords = 
 hold off;
 
 function pltline(s, e, alpha)
