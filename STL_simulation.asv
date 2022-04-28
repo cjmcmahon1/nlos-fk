@@ -1,5 +1,5 @@
 data = stlread("3DBenchy.stl");
-obj_coords = downsample(data.Points, 100);
+obj_coords = downsample(data.Points, 4);
 xvals = linspace(-120, 0, 32);
 yvals = ones(1, 32) .* 60;
 zvals = linspace(-40, 80, 32);
@@ -18,24 +18,38 @@ lines = line(wall_coords, pi/4);
 linedist = distance_to_line(obj_coords(1,:), lines(:,:,1), lines(:,:,2));
 
 threshold = 1;
+timing_res = 256;
+max_wall_dist = 100;
 plotall_lines = false;
+xyt_coords = zeros(32^2, timing_res);
+c = 1;
 for l = 1:size(lines, 1)
+    %for each line, find all object points sufficiently close to that line
+    %(within the above threshold). Then, pick the point with the shortest
+    %euclidean distance to the wall as the reflection point. 
     obj_distances = distance_to_line(obj_coords, ...
                                      lines(l, :, 1), lines(l, :, 2));
-    obj_coords_on_line = obj_distances(obj_distances < threshold);
-    vec_to_wall = obj_coords_on_line - lines(l, :, 1);
-    [min_val, min_idx] = min(vecnorm(vec_to_wall, 2, 2));
-    end_coord = obj_coords_on_line(min_idx)
+    obj_coords_on_line = obj_coords(obj_distances < threshold, :);
+    %make a histogram of timing values, 1 if a hit was detected, 0 if no
+    %hits were detected
+    timing_hist = zeros(timing_res, 1); 
     if size(obj_coords_on_line, 1) >= 1
-        pltline(lines(l, :, 1), lines(l, :, 2), 0.8)
+        %plot the vector of the shortest distance ray that hits the object
+        vec_to_wall = obj_coords_on_line - lines(l, :, 1);
+        [min_val, min_idx] = min(vecnorm(vec_to_wall, 2, 2));
+        %store the (x, y, t) measurement using the ray distance and the
+        %speed of light
+        end_coord = obj_coords_on_line(min_idx,:);
+        %set the hit to be at the closest histogram bin wit
+        timing_hist(round(sqrt(min_val) / max_wall_dist * timing_res)) = 1;
+        pltline(lines(l, :, 1), end_coord, 0.8)
     elseif plotall_lines
         pltline(lines(l, :, 1), lines(l, :, 2), 0.1)
     end
+    timing_hist()
+    xyt_coords(l) = [wall_coords(l, 1), wall_coords(l, 2), sqrt(min_val)/c];
 end
 
-for l = 1:size(lines, 1)
-    pltline(lines(l, :, 1), lines(l, :, 2), 0.1)
-end
 hold off;
 
 function pltline(s, e, alpha)
