@@ -1,10 +1,10 @@
 data = stlread("3DBenchy.stl");
-obj_coords = downsample(data.Points, 100);
-xvals = linspace(-90, 30, 32);
+obj_coords = downsample(data.Points, 10);
+xvals = linspace(-120, 0, 32);
 yvals = ones(1, 32) .* 60;
-zvals = linspace(-60, 60, 32);
+zvals = linspace(-40, 80, 32);
 [X, Z] = meshgrid(xvals, zvals);
-figure(1, 'Name', '3D Plot')
+figure(1)
 trimesh(data, 'FaceColor', 'none', 'EdgeColor', 'k');
 xlabel('X'); ylabel('Y'); zlabel('Z');
 hold on;
@@ -17,15 +17,23 @@ diffz = obj_coords(1, 3) - zvals(16);
 lines = line(wall_coords, pi/4);
 linedist = distance_to_line(obj_coords(1,:), lines(:,:,1), lines(:,:,2));
 
-for obj_idx = 1:size(obj_coords, 1)
-
-end
-
+threshold = 1;
+plotall_lines = false;
 for l = 1:size(lines, 1)
-    pltline(lines(l, :, 1), lines(l, :, 2), 0.1)
+    obj_distances = distance_to_line(obj_coords, ...
+                                     lines(l, :, 1), lines(l, :, 2));
+    obj_coords_on_line = obj_coords(obj_distances < threshold, :);
+    if size(obj_coords_on_line, 1) >= 1
+        %plot the vector of the shortest distance ray that hits the object
+        vec_to_wall = obj_coords_on_line - lines(l, :, 1);
+        [min_val, min_idx] = min(vecnorm(vec_to_wall, 2, 2));
+        end_coord = obj_coords_on_line(min_idx,:);
+        pltline(lines(l, :, 1), end_coord, 0.8)
+    elseif plotall_lines
+        pltline(lines(l, :, 1), lines(l, :, 2), 0.1)
+    end
 end
-plot3([xvals(16) obj_coords(1, 1)], [yvals(16) obj_coords(1, 2)], ...
-      [zvals(16) obj_coords(1, 3)], 'r')
+
 hold off;
 
 function pltline(s, e, alpha)
