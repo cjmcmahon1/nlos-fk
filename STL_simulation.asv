@@ -1,8 +1,9 @@
 data = stlread("3DBenchy.stl");
 obj_coords = downsample(data.Points, 4);
-xvals = linspace(-120, 0, 32);
+wall_res = 64;
+xvals = linspace(-120, 0, wall_res);
 yvals = ones(1, 32) .* 60;
-zvals = linspace(-40, 80, 32);
+zvals = linspace(-40, 80, wall_res);
 [X, Z] = meshgrid(xvals, zvals);
 figure(1)
 trimesh(data, 'FaceColor', 'none', 'EdgeColor', 'k');
@@ -19,10 +20,11 @@ linedist = distance_to_line(obj_coords(1,:), lines(:,:,1), lines(:,:,2));
 
 threshold = 1;
 timing_res = 256;
-max_wall_dist = 100;
+max_wall_dist = 150;
 plotall_lines = false;
-xyt_coords = zeros(32^2, timing_res);
-c = 1;
+time_coords = zeros(wall_res^2, timing_res);
+ray_distances = zeros(wall_res^2, 1);
+c = 1.5e8;
 for l = 1:size(lines, 1)
     %for each line, find all object points sufficiently close to that line
     %(within the above threshold). Then, pick the point with the shortest
@@ -40,17 +42,24 @@ for l = 1:size(lines, 1)
         %store the (x, y, t) measurement using the ray distance and the
         %speed of light
         end_coord = obj_coords_on_line(min_idx,:);
-        %set the hit to be at the closest histogram bin wit
-        timing_hist(round(sqrt(min_val) / max_wall_dist * timing_res)) = 1;
+        %set the hit to be at the closest histogram bin
+        rel_distance = (sqrt(min_val) ) / max_wall_dist;
+        timing_hist(round(rel_distance * timing_res)) = 1;
         pltline(lines(l, :, 1), end_coord, 0.8)
+        ray_distances(l) = sqrt(min_val);
     elseif plotall_lines
         pltline(lines(l, :, 1), lines(l, :, 2), 0.1)
     end
-    timing_hist()
-    xyt_coords(l) = [wall_coords(l, 1), wall_coords(l, 2), sqrt(min_val)/c];
+    time_coords(l, :) = timing_hist;
 end
-
+meas_sim = flip(reshape(time_coords, wall_res, wall_res, timing_res), 1);
 hold off;
+
+% run f-k migration
+wall_size = 2; % scanned area is 2 m x 2 m
+tof = ones(wall_res, wall_res).*1e-3;
+fprintf('\nRunning f-k migration\n');
+fk = cnlos_reconstruction(meas_sim, tof, wall_size, 2, 256);
 
 function pltline(s, e, alpha)
     plot3([s(1), e(1)], [s(2) e(2)], [s(3) e(3)], ...
