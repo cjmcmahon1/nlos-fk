@@ -6,9 +6,9 @@ obj_coords = downsample(data.Points, 10);
 %organize reflectance such that objects at increasing z height have
 %increasing reflectance
 reflectances = zeros(size(obj_coords, 1), 1);
-reflectances(obj_coords(:,3) < 10) = 5;
-reflectances((obj_coords(:,3) < 30) & (obj_coords(:,3) >= 10)) = 7;
-reflectances((obj_coords(:,3) >= 30)) = 10;
+reflectances(obj_coords(:,3) < 10) = 1;
+reflectances((obj_coords(:,3) < 30) & (obj_coords(:,3) >= 10)) = 0.2;
+reflectances((obj_coords(:,3) >= 30)) = 1;
 obj_coords = cat(2, obj_coords, reflectances);
 %generate coordinates of wall
 wall_res = 64;
@@ -68,7 +68,8 @@ wall_size = 2; % scanned area is 2 m x 2 m
 tof = ones(wall_res, wall_res); %tof is arbitrarily set to one in perfect sim
 fprintf('\nRunning f-k migration\n');
 fk = cnlos_reconstruction(meas_sim, tof, wall_size, 2, 256);
-
+fbp = cnlos_reconstruction(meas_sim, tof, wall_size, 0, 256);
+lct = cnlos_reconstruction(meas_sim, tof, wall_size, 1, 256);
 function pltline(s, e, alpha)
     plot3([s(1), e(1)], [s(2) e(2)], [s(3) e(3)], ...
         'LineWidth', 0.1, 'Color', [1 0 0 alpha])
